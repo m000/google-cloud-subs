@@ -47,37 +47,35 @@ def make_subs_fixed(response, bin_size=3000):
         bin_start = words[0].get('startTime', 0)
         bin_end = bin_start + bin_size
 
-        # last word end
-        last_end = words[-1].get('endTime', 0)
-
-        # bin transcript
-        transcript = words[0]['word']
+        # index of first word in the current bin
+        word_first = 0
 
         # subtitle index
         index += 1
 
-        for i, w in enumerate(words[1:], 1):
-            word = w['word']
+        for i, w in enumerate(words):
             word_start = w.get('startTime', 0)
             word_end = w.get('endTime', 0)
 
             if word_end//1000 < bin_end//1000:
-                transcript = transcript + " " + word
+                continue
             else:
-                # append bin transcript
+                # create transcript for bin and append it to output
+                transcript = ' '.join(map(lambda w: w['word'], words[word_first:i]))
                 sub_start = datetime.timedelta(milliseconds=bin_start)
                 sub_end = datetime.timedelta(milliseconds=words[i-1].get('endTime', 0))
                 transcriptions.append(srt.Subtitle(index, sub_start, sub_end, transcript))
 
-                # increment index and reset bin
+                # increment index and update bin info
                 index += 1
+                word_first = i
                 bin_start = word_start
                 bin_end = bin_start + bin_size
-                transcript = word
 
-        # append transcript of last transcript in bin
+        # create and append transcript for the last bin
+        transcript = ' '.join(map(lambda w: w['word'], words[word_first:]))
         sub_start = datetime.timedelta(milliseconds=bin_start)
-        sub_end = datetime.timedelta(milliseconds=last_end)
+        sub_end = datetime.timedelta(milliseconds=words[-1].get('endTime', 0))
         transcriptions.append(srt.Subtitle(index, sub_start, sub_end, transcript))
         index += 1
 
